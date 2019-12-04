@@ -87,5 +87,5 @@ buildNumber.properties
 .idea/vcs.xml
 node_modules/
 package*.json
-src/main/resources/
 target/generated-sources/
+logs

@@ -12,4 +12,14 @@ public class VoteReq {
         this.lastLogIndex = lastLogIndex;
         this.lastLogTerm = lastLogTerm;
     }
+
+    @Override
+    public String toString() {
+        return "VoteReq{" +
+                "term=" + term +
+                ", candidateId=" + candidateId +
+                ", lastLogIndex=" + lastLogIndex +
+                ", lastLogTerm=" + lastLogTerm +
+                '}';
+    }
 }

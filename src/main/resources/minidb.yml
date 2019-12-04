@@ -1,0 +1,12 @@
+nodes:
+  - host: 127.0.0.1
+    id: 1
+    electionPort: 1024
+  -
+    host: 127.0.0.1
+    id: 2
+    electionPort: 1025
+  -
+    host: 127.0.0.1
+    id: 3
+    electionPort: 1026
