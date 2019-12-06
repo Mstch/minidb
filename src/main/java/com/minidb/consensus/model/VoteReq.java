@@ -1,10 +1,12 @@
-package com.minidb.consensus;
+package com.minidb.consensus.model;
 
-public class VoteReq {
-    Integer term;
-    Integer candidateId;
-    Integer lastLogIndex;
-    Integer lastLogTerm;
+import com.minidb.common.model.Req;
+
+public class VoteReq extends Req {
+    public Integer term;
+    public Integer candidateId;
+    public Integer lastLogIndex;
+    public Integer lastLogTerm;
 
     public VoteReq(Integer term, Integer candidateId, Integer lastLogIndex, Integer lastLogTerm) {
         this.term = term;

@@ -1,11 +1,14 @@
-package com.minidb.common;
+package com.minidb.common.model;
 
-import sun.misc.Contended;
+import com.minidb.common.NodeRoleEnum;
+import com.minidb.common.YamlUtil;
 
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class Node {
-    private Integer votes = 0;
+    private AtomicInteger votes = new AtomicInteger(0);
     private Integer term = 0;
     private NodeRoleEnum role = NodeRoleEnum.FLOWER;
     private Boolean hasLeader = Boolean.FALSE;
@@ -15,7 +18,9 @@ public class Node {
     private Integer id;
     private Integer port;
     private Integer electionPort;
-    private Integer syncPort;
+    private Integer healthPort;
+    private AtomicLong commitIndex;
+    private AtomicLong lastApplied;
 
     private Node() {
     }
@@ -23,7 +28,7 @@ public class Node {
     private static Node instance() {
         Node node = YamlUtil.readPojo("minidb.yml", Node.class);
         node.host = System.getProperty("host");
-        node.port = Integer.parseInt(System.getProperty("electionPort"));
+        node.electionPort = Integer.parseInt(System.getProperty("electionPort"));
         node.id = Integer.parseInt(System.getProperty("id"));
         return node;
     }
@@ -87,13 +92,6 @@ public class Node {
         this.electionPort = electionPort;
     }
 
-    public Integer getSyncPort() {
-        return syncPort;
-    }
-
-    public void setSyncPort(Integer syncPort) {
-        this.syncPort = syncPort;
-    }
 
     public Integer getVoteFor() {
         return voteFor;
@@ -111,11 +109,47 @@ public class Node {
         this.nodes = nodes;
     }
 
-    public Integer getVotes() {
+    @Override
+    public boolean equals(Object node) {
+        return node instanceof Node && ((Node) node).getId().equals(id);
+    }
+
+    public Integer getHealthPort() {
+        return healthPort;
+    }
+
+    public void setHealthPort(Integer healthPort) {
+        this.healthPort = healthPort;
+    }
+
+    public AtomicInteger getVotes() {
         return votes;
     }
 
-    public void setVotes(Integer votes) {
+    public void setVotes(AtomicInteger votes) {
         this.votes = votes;
+    }
+
+    public Integer incrVotes() {
+        return votes.incrementAndGet();
+    }
+
+    @Override
+    public String toString() {
+        return "Node{" +
+                "votes=" + votes +
+                ", term=" + term +
+                ", role=" + role +
+                ", hasLeader=" + hasLeader +
+                ", voteFor=" + voteFor +
+                ", nodes=" + nodes +
+                ", host='" + host + '\'' +
+                ", id=" + id +
+                ", port=" + port +
+                ", electionPort=" + electionPort +
+                ", healthPort=" + healthPort +
+                ", commitIndex=" + commitIndex +
+                ", lastApplied=" + lastApplied +
+                '}';
     }
 }

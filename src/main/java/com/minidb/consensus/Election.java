@@ -1,20 +1,22 @@
 package com.minidb.consensus;
 
-import com.minidb.common.Node;
+import com.minidb.common.model.Node;
 import com.minidb.common.NodeRoleEnum;
+import com.minidb.common.ExtensionBlockingQueue;
+import com.minidb.consensus.model.VoteReq;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.LineBasedFrameDecoder;
+import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.util.CharsetUtil;
 import lombok.extern.log4j.Log4j2;
 
 import java.util.*;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
@@ -78,20 +80,27 @@ public class Election {
         final ServerBootstrap bootstrap = new ServerBootstrap();
         final Bootstrap clientBootstrap = new Bootstrap();
 
-        BlockingQueue<Node> unConnectNodes = new LinkedBlockingDeque<>();
+        ExtensionBlockingQueue<Node> unConnectNodes = new ExtensionBlockingQueue<>(node.getNodes().size());
 
         public void start() {
             ElectionHandler handler = new ElectionHandler();
-            LineBasedFrameDecoder lineDecoder = new LineBasedFrameDecoder(31);
             try {
                 bootstrap.group(boos, worker)
                         .channel(NioServerSocketChannel.class)
                         .option(ChannelOption.TCP_NODELAY, Boolean.TRUE)
                         .childHandler(new ChannelInitializer<NioSocketChannel>() {
                             @Override
-                            protected void initChannel(NioSocketChannel ch) throws Exception {
+                            protected void initChannel(NioSocketChannel ch) {
                                 log.info("新连接接入: {}:{}", ch.remoteAddress().getHostString(), ch.remoteAddress().getPort());
-                                ch.pipeline().addLast(new ElectionDecoder()).addLast(handler);
+                                ch.pipeline().addLast(new ByteToMessageDecoder() {
+                                    @Override
+                                    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+                                        String str = in.toString(CharsetUtil.UTF_8);
+                                        if (str.startsWith("hello i'm ")) {
+                                            log.info(str);
+                                        }
+                                    }
+                                }).addLast(new ElectionDecoder()).addLast(handler);
                             }
                         })
                         .bind(node.getPort())
@@ -102,22 +111,38 @@ public class Election {
                         .channel(NioSocketChannel.class)
                         .handler(new ChannelInitializer<NioSocketChannel>() {
                             @Override
-                            protected void initChannel(NioSocketChannel ch)  {
+                            protected void initChannel(NioSocketChannel ch) {
                                 ch.pipeline().addLast(new ElectionEncoder());
                             }
                         });
 
-                node.getNodes().stream().filter(item -> !item.getId().equals(node.getId())).forEach(unConnectNodes::offer);
-                while (true) {
-                    Node unConnectNode = unConnectNodes.take();
-                    ChannelFuture channelFuture = clientBootstrap.connect(unConnectNode.getHost(), unConnectNode.getElectionPort());
-                    if (channelFuture.await(1000L)) {
-                        channels.add(channelFuture.channel());
-                    } else {
-                        unConnectNodes.offer(unConnectNode);
+                new Thread(() -> {
+                    node.getNodes().stream().filter(item -> !item.getId().equals(node.getId())).forEach(unConnectNodes::offer);
+                    while (true) {
+                        Node unConnectNode = null;
+                        try {
+                            unConnectNode = unConnectNodes.take();
+                        } catch (InterruptedException e) {
+                            //TODO
+                        }
+                        ChannelFuture channelFuture = clientBootstrap
+                                .connect(unConnectNode.getHost(), unConnectNode.getElectionPort());
+                        try {
+                            if (channelFuture.isSuccess() || channelFuture.await(1000L)) {
+                                if (channelFuture.isSuccess()) {
+                                    NioSocketChannel ch = (NioSocketChannel) channelFuture.channel();
+                                    channels.add(ch);
+                                    log.info("连接到服务端:{}:{}", ch.remoteAddress().getHostString(), ch.remoteAddress().getPort());
+                                    ch.writeAndFlush(ByteBufUtil.writeUtf8(ch.alloc(), "hello i'm " + node.getId())).sync();
+                                }
+                            } else {
+                                channelFuture.cancel(false);
+                            }
+                        } catch (InterruptedException e) {
+                            //TODO
+                        }
                     }
-
-                }
+                }).start();
             } catch (InterruptedException ex) {
                 //TODO
             }
