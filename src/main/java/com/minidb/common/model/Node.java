@@ -2,8 +2,9 @@ package com.minidb.common.model;
 
 import com.minidb.common.NodeRoleEnum;
 import com.minidb.common.YamlUtil;
-
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -18,9 +19,10 @@ public class Node {
     private Integer id;
     private Integer port;
     private Integer electionPort;
-    private Integer healthPort;
     private AtomicLong commitIndex;
     private AtomicLong lastApplied;
+    private ArrayBlockingQueue logs;
+    private Map<Integer,Flower> flowers;
 
     private Node() {
     }
@@ -114,13 +116,6 @@ public class Node {
         return node instanceof Node && ((Node) node).getId().equals(id);
     }
 
-    public Integer getHealthPort() {
-        return healthPort;
-    }
-
-    public void setHealthPort(Integer healthPort) {
-        this.healthPort = healthPort;
-    }
 
     public AtomicInteger getVotes() {
         return votes;
@@ -147,9 +142,13 @@ public class Node {
                 ", id=" + id +
                 ", port=" + port +
                 ", electionPort=" + electionPort +
-                ", healthPort=" + healthPort +
                 ", commitIndex=" + commitIndex +
                 ", lastApplied=" + lastApplied +
                 '}';
+    }
+
+    private class Flower {
+        AtomicInteger nextIndex;
+
     }
 }

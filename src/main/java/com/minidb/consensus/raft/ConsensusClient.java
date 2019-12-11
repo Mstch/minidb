@@ -1,13 +1,12 @@
-package com.minidb.consensus;
+package com.minidb.consensus.raft;
 
 import com.minidb.common.*;
 import com.minidb.common.model.Node;
 import com.minidb.common.model.Req;
-import com.minidb.consensus.model.VoteReq;
-import com.minidb.consensus.model.VoteResp;
+import com.minidb.consensus.raft.model.VoteReq;
+import com.minidb.consensus.raft.model.VoteResp;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;

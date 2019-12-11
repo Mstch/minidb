@@ -1,4 +1,4 @@
-package com.minidb.consensus.model;
+package com.minidb.consensus.raft.model;
 
 import com.minidb.common.model.Req;
 

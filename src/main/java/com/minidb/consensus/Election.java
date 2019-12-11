@@ -3,7 +3,7 @@ package com.minidb.consensus;
 import com.minidb.common.model.Node;
 import com.minidb.common.NodeRoleEnum;
 import com.minidb.common.ExtensionBlockingQueue;
-import com.minidb.consensus.model.VoteReq;
+import com.minidb.consensus.raft.model.VoteReq;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;

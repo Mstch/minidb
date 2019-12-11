@@ -1,9 +1,11 @@
-package com.minidb.consensus;
+package com.minidb.consensus.raft;
 
 import com.minidb.common.IOTypeConstants;
 import com.minidb.common.model.Node;
-import com.minidb.consensus.model.VoteReq;
-import com.minidb.consensus.model.VoteResp;
+import com.minidb.consensus.raft.model.LogReq;
+import com.minidb.consensus.raft.model.LogResp;
+import com.minidb.consensus.raft.model.VoteReq;
+import com.minidb.consensus.raft.model.VoteResp;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.*;
@@ -16,26 +18,18 @@ import io.netty.handler.codec.MessageToByteEncoder;
 
 import java.util.List;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
 
 public class ConsensusServer {
     private final Node node = Node.instance;
-    private final NioEventLoopGroup boos = new NioEventLoopGroup();
-    private final NioEventLoopGroup worker = new NioEventLoopGroup();
-    private final ServerBootstrap bootstrap = new ServerBootstrap();
     private final VoteHandler voteHandler = new VoteHandler();
+    private final LogHandler logHandler = new LogHandler();
 
     private void listenElection() {
-
-    }
-
-    private void listenHeartbeat() {
-
-    }
-
-    public void start() {
+        NioEventLoopGroup boos = new NioEventLoopGroup();
+        NioEventLoopGroup worker = new NioEventLoopGroup();
+        ServerBootstrap electionBootstrap = new ServerBootstrap();
         try {
-            bootstrap.group(boos, worker)
+            electionBootstrap.group(boos, worker)
                     .channel(NioServerSocketChannel.class)
                     .option(ChannelOption.TCP_NODELAY, true)
                     .childHandler(new ChannelInitializer<NioSocketChannel>() {
@@ -53,6 +47,35 @@ public class ConsensusServer {
         } catch (InterruptedException | ExecutionException e) {
             //TODO
         }
+    }
+
+    private void listenLog() {
+        NioEventLoopGroup logBoos = new NioEventLoopGroup();
+        NioEventLoopGroup logWorker = new NioEventLoopGroup();
+        ServerBootstrap logBootstrap = new ServerBootstrap();
+        try {
+            logBootstrap.group(logBoos, logWorker)
+                    .channel(NioServerSocketChannel.class)
+                    .option(ChannelOption.TCP_NODELAY, true)
+                    .childHandler(new ChannelInitializer<NioSocketChannel>() {
+                        @Override
+                        protected void initChannel(NioSocketChannel ch) throws Exception {
+                            ch.pipeline()
+                                    //拆包
+                                    .addLast(new LineBasedFrameDecoder(256))
+                                    .addLast(new ConsensusDispatcher())
+                                    .addLast(new LogEncoder())
+                                    .addLast(logHandler);
+                        }
+                    })
+                    .bind(node.getPort()).sync();
+        } catch (InterruptedException ignore) {
+        }
+    }
+
+    public void start() {
+        listenElection();
+        listenLog();
     }
 
     /**
@@ -115,4 +138,20 @@ public class ConsensusServer {
         }
     }
 
+    private class LogEncoder extends MessageToByteEncoder<LogResp> {
+        @Override
+        protected void encode(ChannelHandlerContext ctx, LogResp msg, ByteBuf out) throws Exception {
+
+        }
+    }
+
+    @ChannelHandler.Sharable
+    private class LogHandler extends ChannelInboundHandlerAdapter {
+        @Override
+        public void channelRead(ChannelHandlerContext ctx, Object msg) {
+            if (msg instanceof LogReq) {
+                LogReq req = (LogReq) msg;
+            }
+        }
+    }
 }

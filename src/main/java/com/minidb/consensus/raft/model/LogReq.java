@@ -1,20 +1,22 @@
-package com.minidb.consensus.model;
+package com.minidb.consensus.raft.model;
 
 import com.minidb.common.model.Req;
 import com.minidb.store.Log;
 
-public class AppendReq extends Req {
+public class LogReq extends Req {
     Integer term;
     Integer leaderId;
     Integer prevLogIndex;
     Integer prevLogTerm;
     Log[]   logs;
+    Integer leaderCommit;
 
-    public AppendReq(Integer term, Integer leaderId, Integer prevLogIndex, Integer prevLogTerm, Log[] logs) {
+    public LogReq(Integer term, Integer leaderId, Integer prevLogIndex, Integer prevLogTerm, Log[] logs, Integer leaderCommit) {
         this.term = term;
         this.leaderId = leaderId;
         this.prevLogIndex = prevLogIndex;
         this.prevLogTerm = prevLogTerm;
         this.logs = logs;
+        this.leaderCommit = leaderCommit;
     }
 }

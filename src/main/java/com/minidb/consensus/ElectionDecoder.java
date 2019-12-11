@@ -1,6 +1,6 @@
 package com.minidb.consensus;
 
-import com.minidb.consensus.model.VoteReq;
+import com.minidb.consensus.raft.model.VoteReq;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;

@@ -1,18 +1,22 @@
 package com.minidb;
 
-import com.minidb.consensus.ConsensusClient;
-import com.minidb.consensus.ConsensusServer;
 
-import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 
 public class Main {
 
     static Integer a = 0;
 
     public static void main(String[] args) throws InterruptedException {
-
-            new ConsensusServer().start();
-            new ConsensusClient().start();
+        BlockingQueue queue = new ArrayBlockingQueue(10);
+        for (int i = 0; i < 10; i++) {
+            queue.put(i);
+        }
+        for (int i = 0; i < 5; i++) {
+            queue.take();
+        }
+        queue.put(1);
 
     }
 }
