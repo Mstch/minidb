@@ -1,10 +1,12 @@
-package com.minidb.common.model;
+package com.minidb.consensus.raft.model;
 
 import com.minidb.common.NodeRoleEnum;
 import com.minidb.common.YamlUtil;
+import com.minidb.consensus.raft.EntryStoreUtil;
+
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -19,10 +21,21 @@ public class Node {
     private Integer id;
     private Integer port;
     private Integer electionPort;
-    private AtomicLong commitIndex;
+    private AtomicInteger commitIndex;
     private AtomicLong lastApplied;
-    private ArrayBlockingQueue logs;
-    private Map<Integer,Flower> flowers;
+
+    public Entries getEntries() {
+        return entries;
+    }
+
+    private Entries entries;
+    private Map<Integer, Flower> flowers;
+
+    public Log appendLog(Log log) {
+        //先写硬盘,再写入内存（用来发送给其他flower）,并维护 index到log 的映射
+        return entries.append(log);
+    }
+
 
     private Node() {
     }
@@ -32,6 +45,7 @@ public class Node {
         node.host = System.getProperty("host");
         node.electionPort = Integer.parseInt(System.getProperty("electionPort"));
         node.id = Integer.parseInt(System.getProperty("id"));
+        node.entries = new Entries(new ConcurrentHashMap<>(), EntryStoreUtil.peek().index);
         return node;
     }
 
@@ -129,6 +143,23 @@ public class Node {
         return votes.incrementAndGet();
     }
 
+
+    public AtomicInteger getCommitIndex() {
+        return commitIndex;
+    }
+
+    public void setCommitIndex(AtomicInteger commitIndex) {
+        this.commitIndex = commitIndex;
+    }
+
+    public AtomicLong getLastApplied() {
+        return lastApplied;
+    }
+
+    public void setLastApplied(AtomicLong lastApplied) {
+        this.lastApplied = lastApplied;
+    }
+
     @Override
     public String toString() {
         return "Node{" +
@@ -147,8 +178,12 @@ public class Node {
                 '}';
     }
 
-    private class Flower {
-        AtomicInteger nextIndex;
+    public Map<Integer, Flower> getFlowers() {
+        return flowers;
+    }
 
+    public class Flower {
+        public AtomicInteger nextIndex;
+        public AtomicInteger matchIndex;
     }
 }

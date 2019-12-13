@@ -1,10 +1,7 @@
 package com.minidb.consensus.raft;
 
 import com.minidb.common.*;
-import com.minidb.common.model.Node;
-import com.minidb.common.model.Req;
-import com.minidb.consensus.raft.model.VoteReq;
-import com.minidb.consensus.raft.model.VoteResp;
+import com.minidb.consensus.raft.model.*;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.*;
@@ -13,6 +10,7 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.MessageToByteEncoder;
+import io.netty.util.AttributeKey;
 import lombok.extern.log4j.Log4j2;
 
 import java.util.*;
@@ -22,6 +20,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
+
+import static com.minidb.consensus.raft.AttributeKeys.REMOTE_ID;
 
 @Log4j2
 public class ConsensusClient {
@@ -33,7 +33,9 @@ public class ConsensusClient {
     private Set<Channel> channels = new HashSet<>(CONNECT_NODE_NUMBER);
     private NioEventLoopGroup clientEventLoop = new NioEventLoopGroup(CONNECT_NODE_NUMBER);
     private ReentrantLock electionLock = new ReentrantLock();
-    private Condition loopWait = electionLock.newCondition();
+    private Condition electionLoopWait = electionLock.newCondition();
+    private ReentrantLock heartbeatLock = new ReentrantLock();
+    private Condition heartbeatLoopWait = electionLock.newCondition();
     private BlockingQueue<Node> unConnectNodes = new ArrayBlockingQueue<>(CONNECT_NODE_NUMBER);
     private VoteResponseHandler voteResponseHandler = new VoteResponseHandler();
     private Bootstrap client = new Bootstrap()
@@ -62,8 +64,10 @@ public class ConsensusClient {
                                 log.warn("连接至:{}失败", unConnectNode);
                                 unConnectNodes.put(unConnectNode);
                             } else {
-                                log.info("连接至:{}成功!",unConnectNode);
-                                channels.add(((ChannelFuture) future).channel());
+                                log.info("连接至:{}成功!", unConnectNode);
+                                Channel channel = ((ChannelFuture) future).channel();
+                                channel.attr(REMOTE_ID).set(unConnectNode.getId());
+                                channels.add(channel);
                             }
                         });
             } catch (InterruptedException e) {
@@ -77,10 +81,28 @@ public class ConsensusClient {
             electionLock.lock();
             int random = new Random().nextInt(150) + 150;
             try {
-                if (!loopWait.await(random * 10, TimeUnit.MILLISECONDS ) && channels.size() > 0) {
+                if (!electionLoopWait.await(random * 10, TimeUnit.MILLISECONDS) && channels.size() > 0) {
                     if (node.getRole().equals(NodeRoleEnum.FLOWER)) {
                         node.setRole(NodeRoleEnum.CANDIDATE);
                         voteReq();
+                    } else if (node.getRole().equals(NodeRoleEnum.CANDIDATE)) {
+                        voteReq();
+                    }
+                }
+            } catch (InterruptedException e) {
+                //TODO
+            }
+        }
+    });
+
+    private Thread heartbeatLoopThread = new Thread(() -> {
+        while (true) {
+            heartbeatLock.lock();
+            int random = new Random().nextInt(50) + 50;
+            try {
+                if (!heartbeatLoopWait.await(random * 10, TimeUnit.MILLISECONDS) && channels.size() > 0) {
+                    if (node.getRole().equals(NodeRoleEnum.LEADER)) {
+                        heartbeatReq();
                     } else if (node.getRole().equals(NodeRoleEnum.CANDIDATE)) {
                         voteReq();
                     }
@@ -102,8 +124,10 @@ public class ConsensusClient {
                                     if (!future.isSuccess()) {
                                         unConnectNodes.put(item);
                                     } else {
-                                        log.info("连接至:{}成功!",item);
-                                        channels.add(((ChannelFuture) future).channel());
+                                        log.info("连接至:{}成功!", item);
+                                        Channel channel = ((ChannelFuture) future).channel();
+                                        channel.attr(REMOTE_ID).set(item.getId());
+                                        channels.add(channel);
                                     }
                                 })
                 );
@@ -136,7 +160,15 @@ public class ConsensusClient {
     }
 
     public void heartbeatReq() {
-
+        Entries entries = node.getEntries();
+        log.info("{}心跳触发,任期{}", node.getId(), node.getTerm());
+        channels.forEach(ch -> {
+            Node.Flower flower = node.getFlowers().get(ch.attr(REMOTE_ID).get());
+            Integer nextIndex = flower.nextIndex.get();
+            Entries.Entry[] es = entries.fetchLogs(nextIndex, entries.lastIndex);
+            LogReq logReq = new LogReq(node.getTerm(), node.getId(), nextIndex - 1, entries.indexedEntries.get(nextIndex - 1).term, es, node.getCommitIndex().get());
+            ch.writeAndFlush(logReq);
+        });
     }
 
     /**
@@ -153,6 +185,9 @@ public class ConsensusClient {
                 out.writeInt(req.lastLogIndex);
                 out.writeInt(req.lastLogTerm);
                 out.writeChar('\n');
+            }
+            if(msg instanceof LogReq){
+                LogReq req = (LogReq)msg;
             }
         }
     }

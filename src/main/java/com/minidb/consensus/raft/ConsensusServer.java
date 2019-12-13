@@ -1,7 +1,7 @@
 package com.minidb.consensus.raft;
 
 import com.minidb.common.IOTypeConstants;
-import com.minidb.common.model.Node;
+import com.minidb.consensus.raft.model.Node;
 import com.minidb.consensus.raft.model.LogReq;
 import com.minidb.consensus.raft.model.LogResp;
 import com.minidb.consensus.raft.model.VoteReq;

@@ -1,4 +1,4 @@
-package com.minidb.common.model;
+package com.minidb.consensus.raft.model;
 
 public abstract class Req {
     byte type;

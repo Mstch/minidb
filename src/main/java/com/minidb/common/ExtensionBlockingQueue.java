@@ -15,6 +15,7 @@ import java.util.Spliterator;
 
 /**
  * just add a block peek
+ *
  * @param <E>
  */
 public class ExtensionBlockingQueue<E> extends AbstractQueue<E>
@@ -24,7 +25,7 @@ public class ExtensionBlockingQueue<E> extends AbstractQueue<E>
     private static final long serialVersionUID = -817911632652898426L;
 
 
-    final Object[] items;
+    public final Object[] items;
 
 
     int takeIndex;

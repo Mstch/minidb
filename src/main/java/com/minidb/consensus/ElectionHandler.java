@@ -1,6 +1,6 @@
 package com.minidb.consensus;
 
-import com.minidb.common.model.Node;
+import com.minidb.consensus.raft.model.Node;
 import com.minidb.common.Handler;
 import com.minidb.common.NodeRoleEnum;
 import com.minidb.consensus.raft.model.VoteReq;

@@ -1,9 +1,5 @@
 package com.minidb.consensus.raft.model;
 
-import com.minidb.common.model.Resp;
-import lombok.ToString;
-
-@ToString
 public class VoteResp  extends Resp {
    public int term;
     public boolean voteGranted;

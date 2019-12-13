@@ -1,7 +1,5 @@
 package com.minidb.consensus.raft.model;
 
-import com.minidb.common.model.Req;
-
 public class VoteReq extends Req {
     public Integer term;
     public Integer candidateId;

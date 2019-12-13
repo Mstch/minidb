@@ -1,7 +1,5 @@
 package com.minidb.consensus.raft.model;
 
-import com.minidb.common.model.Resp;
-
 public class LogResp extends Resp {
 
     Integer term;
