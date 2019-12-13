@@ -1,11 +1,7 @@
 package com.minidb.consensus.raft;
 
 import com.minidb.common.IOTypeConstants;
-import com.minidb.consensus.raft.model.Node;
-import com.minidb.consensus.raft.model.LogReq;
-import com.minidb.consensus.raft.model.LogResp;
-import com.minidb.consensus.raft.model.VoteReq;
-import com.minidb.consensus.raft.model.VoteResp;
+import com.minidb.consensus.raft.model.*;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.*;
@@ -13,6 +9,7 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.MessageToByteEncoder;
 
@@ -38,9 +35,9 @@ public class ConsensusServer {
                             ch.pipeline()
                                     //拆包
                                     .addLast(new LineBasedFrameDecoder(256))
-                                    .addLast(new ConsensusDispatcher())
-                                    .addLast(new VoteEncoder())
-                                    .addLast(voteHandler);
+                                    .addLast(new VoteDecoder())
+                                    .addLast(voteHandler)
+                                    .addLast(new VoteEncoder());
                         }
                     })
                     .bind(node.getElectionPort()).get();
@@ -62,8 +59,7 @@ public class ConsensusServer {
                         protected void initChannel(NioSocketChannel ch) throws Exception {
                             ch.pipeline()
                                     //拆包
-                                    .addLast(new LineBasedFrameDecoder(256))
-                                    .addLast(new ConsensusDispatcher())
+                                    .addLast(new LengthFieldBasedFrameDecoder(4096 * 1024, 1, 4))
                                     .addLast(new LogEncoder())
                                     .addLast(logHandler);
                         }
@@ -78,28 +74,25 @@ public class ConsensusServer {
         listenLog();
     }
 
-    /**
-     * 将追加/投票分发到对应handler上
-     */
-    private class ConsensusDispatcher extends ByteToMessageDecoder {
-        @Override
-        protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
-            if (in.readableBytes() == 18) {
-                byte type = in.readByte();
-                if (type == IOTypeConstants.VOTE_REQ) {
-                    int term = in.readInt();
-                    int candidateId = in.readInt();
-                    int lastLogIndex = in.readInt();
-                    int lastLogTerm = in.readInt();
-                    VoteReq req = new VoteReq(term, candidateId, lastLogIndex, lastLogTerm);
-                    out.add(req);
-                } else if (type == IOTypeConstants.APPEND_REQ) {
 
-                }
+    /**
+     * 投票请求解码
+     */
+    private class VoteDecoder extends ByteToMessageDecoder {
+
+        @Override
+        protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+            byte type = in.readByte();
+            if (type == IOTypeConstants.VOTE_REQ) {
+                int term = in.readInt();
+                int candidateId = in.readInt();
+                int lastLogIndex = in.readInt();
+                int lastLogTerm = in.readInt();
+                VoteReq req = new VoteReq(term, candidateId, lastLogIndex, lastLogTerm);
+                out.add(req);
             }
         }
     }
-
 
     /**
      * 处理投票
@@ -125,7 +118,7 @@ public class ConsensusServer {
     }
 
     /**
-     * 投票响应
+     * 投票响应编码
      */
     private class VoteEncoder extends MessageToByteEncoder<VoteResp> {
 
@@ -138,13 +131,35 @@ public class ConsensusServer {
         }
     }
 
-    private class LogEncoder extends MessageToByteEncoder<LogResp> {
-        @Override
-        protected void encode(ChannelHandlerContext ctx, LogResp msg, ByteBuf out) throws Exception {
+    /**
+     * 日志请求解码
+     */
+    private class LogDecoder extends ByteToMessageDecoder {
 
+
+        @Override
+        protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+            if(in.readByte() == IOTypeConstants.APPEND_REQ){
+                int len = in.readInt();
+                int term = in.readInt();
+                int leaderId = in.readInt();
+                int prevLogIndex = in.readInt();
+                int prevLogTerm = in.readInt();
+                while(in.readInt() != Integer.MAX_VALUE){
+                    int logLen = in.readInt();
+                    int entryIndex = in.readInt();
+                    int entryTerm = in.readInt();
+                    byte[] logBytes = in.readBytes(logLen).array();
+                    Log log =
+                }
+
+            }
         }
     }
 
+    /**
+     * 日志处理
+     */
     @ChannelHandler.Sharable
     private class LogHandler extends ChannelInboundHandlerAdapter {
         @Override

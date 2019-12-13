@@ -186,8 +186,28 @@ public class ConsensusClient {
                 out.writeInt(req.lastLogTerm);
                 out.writeChar('\n');
             }
-            if(msg instanceof LogReq){
-                LogReq req = (LogReq)msg;
+            if (msg instanceof LogReq) {
+                int packageLen = 27;
+                LogReq req = (LogReq) msg;
+                out.writeByte(IOTypeConstants.APPEND_REQ)
+                        .markWriterIndex()
+                        .writeInt(packageLen)
+                        .writeInt(req.term)
+                        .writeInt(req.leaderId)
+                        .writeInt(req.prevLogIndex)
+                        .writeInt(req.prevLogTerm);
+                for (Entries.Entry entry : req.logs) {
+                    byte[] bytes = entry.log.serialize();
+                    out.writeInt(bytes.length)
+                            .writeInt(entry.index)
+                            .writeInt(entry.term);
+                    out.writeBytes(bytes);
+                    packageLen += 12 + bytes.length;
+                }
+                out.writeInt(Integer.MAX_VALUE);
+                out.writeInt(node.getCommitIndex().get())
+                        .resetWriterIndex()
+                        .writeInt(packageLen);
             }
         }
     }
