@@ -30,5 +30,11 @@ public class Entries {
         public Integer index;
         public Integer term;
         public Log log;
+
+        public Entry(Integer index, Integer term, Log log) {
+            this.index = index;
+            this.term = term;
+            this.log = log;
+        }
     }
 }

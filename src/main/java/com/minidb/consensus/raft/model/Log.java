@@ -1,20 +1,18 @@
 package com.minidb.consensus.raft.model;
 
 
-import com.minidb.consensus.raft.SerializeUtil;
-import io.netty.buffer.ByteBufUtil;
+import com.minidb.common.KryoSerializer;
 
-public interface Log{
+public interface Log {
 
     <T> T apply();
 
     Entries.Entry store();
 
-    default byte[] serialize(){
-        return SerializeUtil.serializeToByte(this);
+    default byte[] serialize() {
+        return KryoSerializer.instance.serialize(this);
     }
 
-   default Log deserialize(byte[] bytes){
 
-    };
 }
+

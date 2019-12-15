@@ -1,6 +1,7 @@
 package com.minidb.consensus.raft;
 
 import com.minidb.common.IOTypeConstants;
+import com.minidb.common.KryoSerializer;
 import com.minidb.consensus.raft.model.*;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
@@ -12,7 +13,9 @@ import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.MessageToByteEncoder;
+import io.netty.util.concurrent.EventExecutorGroup;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
@@ -139,20 +142,24 @@ public class ConsensusServer {
 
         @Override
         protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
-            if(in.readByte() == IOTypeConstants.APPEND_REQ){
+            if (in.readByte() == IOTypeConstants.APPEND_REQ) {
                 int len = in.readInt();
                 int term = in.readInt();
                 int leaderId = in.readInt();
                 int prevLogIndex = in.readInt();
                 int prevLogTerm = in.readInt();
-                while(in.readInt() != Integer.MAX_VALUE){
+                List<Entries.Entry> entries = new ArrayList<>();
+                while (in.readInt() != Integer.MAX_VALUE) {
                     int logLen = in.readInt();
                     int entryIndex = in.readInt();
                     int entryTerm = in.readInt();
                     byte[] logBytes = in.readBytes(logLen).array();
-                    Log log =
+                    Log log = KryoSerializer.instance.deserialize(logBytes);
+                    entries.add(node.getEntries().new Entry(entryIndex, entryTerm, log));
                 }
-
+                int leaderCommit = in.readerIndex();
+                LogReq logReq = new LogReq(term, leaderId, prevLogIndex, prevLogTerm, entries, leaderCommit);
+                out.add(logReq);
             }
         }
     }
@@ -167,6 +174,14 @@ public class ConsensusServer {
             if (msg instanceof LogReq) {
                 LogReq req = (LogReq) msg;
             }
+        }
+    }
+
+    private class LogEncoder extends MessageToByteEncoder<LogResp> {
+
+        @Override
+        protected void encode(ChannelHandlerContext channelHandlerContext, LogResp logResp, ByteBuf byteBuf) throws Exception {
+
         }
     }
 }

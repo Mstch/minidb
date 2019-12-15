@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="TerminalProjectOptionsProvider">
+    <envs>
+      <env key="FPS_BROWSER_APP_PROFILE_STRING" value="Internet Explorer" />
+      <env key="FPS_BROWSER_USER_PROFILE_STRING" value="Default" />
+      <env key="IDEA_INITIAL_DIRECTORY" value="C:\Windows\System32" />
+      <env key="Path" value="C:\ProgramData\DockerDesktop\version-bin;C:\Program Files\Docker\Docker\Resources\bin;C:\Program Files (x86)\Common Files\Oracle\Java\javapath;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Windows\System32\OpenSSH\;C:\Program Files\NVIDIA Corporation\NVIDIA NGX;C:\Program Files\Git\cmd;C:\Android;C:\Program Files\nodejs\;C:\Program Files\cmder_mini;C:\Users\tiddar\AppData\Roaming\npm" />
+    </envs>
+  </component>
+</project>
