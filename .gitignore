@@ -85,6 +85,7 @@ buildNumber.properties
 .mvn/wrapper/maven-wrapper.jar
 
 .idea/vcs.xml
+.idea/terminal.xml
 node_modules/
 package*.json
 target/generated-sources/
